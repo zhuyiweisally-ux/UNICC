@@ -35,6 +35,14 @@ python3 main.py --agent_url https://github.com/FlashCarrot/VeriMedia --mock
 # or
 MOCK_MODE=1 python3 main.py --agent_url https://github.com/FlashCarrot/VeriMedia
 ```
+### Expected output
+════════════════════════════════════════════════
+UNICC AI SAFETY LAB — COUNCIL OF EXPERTS REPORT
+Agent:          VeriMedia
+Final Verdict:  WARN
+Safety Score:   2.4/5.0
+Recommendation: REVIEW
+════════════════════════════════════════════════
 
 ### Save output as JSON
 ```bash
