@@ -102,10 +102,11 @@ def format_report(report) -> str:
     lines.append(f"Human Review:   {'REQUIRED' if report.requires_human_review else 'Not required'}")
     lines.append("")
     lines.append("── MODULE VERDICTS ──────────────────────────────────")
+    
     names = {
-        "module_a_scoring":    "ScoringExpert    (harm scoring)",
-        "module_b_governance": "GovernanceExpert (rule compliance)",
-        "module_c_redteam":    "RedTeamExpert    (adversarial test)",
+    "module_a_scoring":    "Module A — Harm Scoring",
+    "module_b_governance": "Module B — Governance Compliance",
+    "module_c_redteam":    "Module C — Adversarial Red Team",
     }
     for mid, verdict in report.module_verdicts.items():
         score = report.module_scores.get(mid, "N/A")
