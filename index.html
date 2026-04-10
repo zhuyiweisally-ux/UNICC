@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNICC AI Safety Lab — Council of Experts</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f6f9;--bg2:#ffffff;--bg3:#f0f2f5;--bg4:#e8ebf0;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.13);
+  --text:#1a2233;--text2:#5a6a82;--text3:#9aaabb;
+  --accent:#3b6fff;--accent-dim:rgba(59,111,255,0.08);
+  --pass:#059669;--pass-bg:rgba(5,150,105,0.08);--pass-border:rgba(5,150,105,0.25);
+  --warn:#d97706;--warn-bg:rgba(217,119,6,0.08);--warn-border:rgba(217,119,6,0.25);
+  --fail:#dc2626;--fail-bg:rgba(220,38,38,0.08);--fail-border:rgba(220,38,38,0.25);
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',system-ui,sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;}
+
+/* ── Sidebar ── */
+.sidebar{position:fixed;left:0;top:0;width:220px;height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;}
+.logo{padding:24px 20px 20px;border-bottom:1px solid var(--border);}
+.logo-badge{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.logo-icon{width:32px;height:32px;background:var(--accent-dim);border:1px solid rgba(59,111,255,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.logo-icon svg{width:16px;height:16px;stroke:#3b6fff;fill:none;stroke-width:2;}
+.logo-title{font-size:13px;font-weight:600;color:var(--text);letter-spacing:0.01em;}
+.logo-sub{font-size:11px;color:var(--text2);}
+.nav{padding:16px 12px;flex:1;}
+.nav-label{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;padding:0 8px;margin-bottom:6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.15s;margin-bottom:2px;border:1px solid transparent;}
+.nav-item:hover{background:var(--bg3);color:var(--text);}
+.nav-item.active{background:var(--accent-dim);color:#6b9fff;border-color:rgba(59,111,255,0.2);}
+.nav-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;flex-shrink:0;}
+.sidebar-footer{padding:16px;border-top:1px solid var(--border);}
+.api-status{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background 0.3s;}
+.status-dot.online{background:var(--pass);box-shadow:0 0 6px rgba(16,185,129,0.5);}
+.status-dot.offline{background:var(--fail);}
+.status-text{font-size:11px;color:var(--text2);font-family:var(--mono);}
+
+/* ── Main ── */
+.main{margin-left:220px;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{padding:18px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);position:sticky;top:0;z-index:50;}
+.topbar-title{font-size:16px;font-weight:500;color:var(--text);}
+.topbar-sub{font-size:12px;color:var(--text2);margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.tag{font-size:11px;font-family:var(--mono);padding:4px 10px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);}
+.content{padding:32px;flex:1;}
+
+/* ── Pages ── */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── Stats grid ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.total::before{background:linear-gradient(90deg,var(--accent),transparent);}
+.stat-card.pass::before{background:linear-gradient(90deg,var(--pass),transparent);}
+.stat-card.warn::before{background:linear-gradient(90deg,var(--warn),transparent);}
+.stat-card.fail::before{background:linear-gradient(90deg,var(--fail),transparent);}
+.stat-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;}
+.stat-num{font-size:28px;font-weight:300;font-family:var(--mono);color:var(--text);}
+.stat-icon{position:absolute;right:18px;top:50%;transform:translateY(-50%);opacity:0.15;}
+.stat-icon svg{width:32px;height:32px;stroke:currentColor;fill:none;stroke-width:1.5;}
+
+/* ── History table ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.section-title{font-size:14px;font-weight:500;color:var(--text);}
+.section-sub{font-size:12px;color:var(--text2);margin-top:2px;}
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:12px 16px;text-align:left;font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border);background:var(--bg3);}
+tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.12s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--bg3);}
+tbody td{padding:13px 16px;font-size:13px;color:var(--text);}
+.hash-cell{font-family:var(--mono);font-size:11px;color:var(--text2);}
+.empty-state{text-align:center;padding:64px 32px;}
+.empty-icon{width:48px;height:48px;margin:0 auto 16px;opacity:0.2;}
+.empty-icon svg{width:100%;height:100%;stroke:var(--text2);fill:none;stroke-width:1.5;}
+.empty-text{font-size:14px;color:var(--text2);margin-bottom:6px;}
+.empty-sub{font-size:12px;color:var(--text3);}
+
+/* ── Verdict badge ── */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;font-family:var(--mono);letter-spacing:0.04em;}
+.badge.pass{background:var(--pass-bg);color:var(--pass);border:1px solid var(--pass-border);}
+.badge.warn{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-border);}
+.badge.fail{background:var(--fail-bg);color:var(--fail);border:1px solid var(--fail-border);}
+.badge.info{background:rgba(59,111,255,0.1);color:#6b9fff;border:1px solid rgba(59,111,255,0.2);}
+.badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* ── Evaluate form ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group.full{grid-column:1/-1;}
+label{font-size:12px;color:var(--text2);font-weight:500;letter-spacing:0.04em;}
+input,textarea,select{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none;transition:border-color 0.15s;width:100%;resize:vertical;}
+input:focus,textarea:focus,select:focus{border-color:rgba(59,111,255,0.5);box-shadow:0 0 0 3px rgba(59,111,255,0.08);}
+textarea{min-height:140px;font-family:var(--mono);font-size:12px;line-height:1.6;}
+.form-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;}
+.form-title{font-size:14px;font-weight:500;margin-bottom:4px;}
+.form-desc{font-size:12px;color:var(--text2);margin-bottom:20px;}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border:1px solid;font-family:var(--sans);}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-primary:hover{background:#2952e0;}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-ghost{background:transparent;color:var(--text2);border-color:var(--border2);}
+.btn-ghost:hover{background:var(--bg3);color:var(--text);}
+.btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;}
+
+/* ── Result view ── */
+.result-header{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:20px;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;}
+.verdict-main{display:flex;align-items:center;gap:20px;}
+.verdict-circle{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;font-family:var(--mono);flex-shrink:0;}
+.verdict-circle.pass{background:var(--pass-bg);color:var(--pass);border:2px solid var(--pass-border);}
+.verdict-circle.warn{background:var(--warn-bg);color:var(--warn);border:2px solid var(--warn-border);}
+.verdict-circle.fail{background:var(--fail-bg);color:var(--fail);border:2px solid var(--fail-border);}
+.verdict-label{font-size:22px;font-weight:600;margin-bottom:4px;}
+.verdict-label.pass{color:var(--pass);}
+.verdict-label.warn{color:var(--warn);}
+.verdict-label.fail{color:var(--fail);}
+.verdict-meta{font-size:13px;color:var(--text2);}
+.score-bar-wrap{flex:1;max-width:280px;}
+.score-label{display:flex;justify-content:space-between;margin-bottom:8px;}
+.score-label span:first-child{font-size:12px;color:var(--text2);}
+.score-label span:last-child{font-size:13px;font-weight:500;font-family:var(--mono);}
+.score-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+.score-fill{height:100%;border-radius:3px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1);}
+.score-fill.pass{background:var(--pass);}
+.score-fill.warn{background:var(--warn);}
+.score-fill.fail{background:var(--fail);}
+.result-meta-row{display:flex;gap:16px;margin-top:16px;flex-wrap:wrap;}
+.meta-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--text2);font-family:var(--mono);}
+.meta-pill b{color:var(--text);}
+
+/* ── Module cards ── */
+.module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+.module-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;}
+.module-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;}
+.module-card.pass::after{background:var(--pass);}
+.module-card.warn::after{background:var(--warn);}
+.module-card.fail::after{background:var(--fail);}
+.module-name{font-size:11px;color:var(--text2);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;}
+.module-score{font-size:26px;font-weight:300;font-family:var(--mono);margin-bottom:6px;}
+.module-score.pass{color:var(--pass);}
+.module-score.warn{color:var(--warn);}
+.module-score.fail{color:var(--fail);}
+.module-score span{font-size:13px;color:var(--text3);}
+
+/* ── Governance flags ── */
+.flags-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.flag-tag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;font-size:11px;font-family:var(--mono);cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);transition:all 0.15s;}
+.flag-tag:hover{border-color:rgba(59,111,255,0.4);color:#6b9fff;background:rgba(59,111,255,0.08);}
+.flag-tag.critical{border-color:var(--fail-border);color:var(--fail);background:var(--fail-bg);}
+
+/* ── Rationale block ── */
+.rationale-block{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.rationale-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+.rationale-header:hover{background:var(--bg3);}
+.rationale-header h3{font-size:13px;font-weight:500;}
+.rationale-body{padding:20px;font-size:13px;color:var(--text2);line-height:1.8;display:none;}
+.rationale-body.open{display:block;}
+
+/* ── Disagreements ── */
+.disagree-item{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:8px;margin-bottom:8px;font-size:12px;color:var(--text);}
+.agree-item{padding:12px 16px;background:var(--pass-bg);border:1px solid var(--pass-border);border-radius:8px;font-size:12px;color:var(--pass);}
+
+/* ── Human review banner ── */
+.review-banner{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--fail-bg);border:1px solid var(--fail-border);border-radius:10px;margin-bottom:20px;font-size:13px;}
+.review-banner svg{width:18px;height:18px;stroke:var(--fail);fill:none;stroke-width:2;flex-shrink:0;}
+.review-banner strong{color:var(--fail);}
+.review-banner span{color:var(--text2);}
+
+/* ── Audit footer ── */
+.audit-row{display:flex;gap:16px;margin-top:16px;flex-wrap:wrap;}
+.audit-item{font-size:11px;font-family:var(--mono);color:var(--text3);}
+.audit-item b{color:var(--text3);}
+
+/* ── Spinner ── */
+.spinner-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 32px;gap:16px;}
+.spinner{width:36px;height:36px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner-text{font-size:13px;color:var(--text2);}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:28px;max-width:520px;width:calc(100% - 32px);position:relative;}
+.modal h2{font-size:15px;font-weight:500;margin-bottom:6px;}
+.modal-id{font-size:11px;font-family:var(--mono);color:var(--accent);margin-bottom:16px;}
+.modal-body{font-size:13px;color:var(--text2);line-height:1.7;}
+.modal-close{position:absolute;top:16px;right:16px;width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);}
+.modal-close:hover{background:var(--bg4);}
+.rule-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+
+/* ── Connection check ── */
+.conn-banner{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;margin-bottom:24px;font-size:12px;background:var(--bg3);border:1px solid var(--border);}
+.conn-banner.ok{background:var(--pass-bg);border-color:var(--pass-border);color:var(--pass);}
+.conn-banner.error{background:var(--fail-bg);border-color:var(--fail-border);color:var(--fail);}
+
+/* ── Utilities ── */
+.divider{height:1px;background:var(--border);margin:20px 0;}
+.flex{display:flex;}.items-center{align-items:center;}.justify-between{justify-content:space-between;}.gap-8{gap:8px;}.gap-12{gap:12px;}
+.mt-8{margin-top:8px;}.mt-12{margin-top:12px;}.mt-16{margin-top:16px;}.mb-16{margin-bottom:16px;}
+.text-mono{font-family:var(--mono);}.text-sm{font-size:12px;}.text-muted{color:var(--text2);}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-badge">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div>
+        <div class="logo-title">UNICC Safety Lab</div>
+      </div>
+    </div>
+    <div class="logo-sub">Council of Experts</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-label">Navigation</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="navigate('evaluate')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Run Evaluation
+    </div>
+    <div class="nav-item" onclick="navigate('history')">
+      <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><polyline points="12 7 12 12 15 15"/></svg>
+      History
+    </div>
+    <div class="nav-item" onclick="navigate('rules')">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Governance Rules
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="api-status">
+      <div class="status-dot" id="status-dot"></div>
+      <div class="status-text" id="status-text">Checking API...</div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div class="topbar-sub" id="page-sub">UNICC AI Safety Evaluation System</div>
+    </div>
+    <div class="topbar-right">
+      <span class="tag" id="api-mode-tag">localhost:5050</span>
+      <span class="tag">NYU GC-4100</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card total">
+          <div class="stat-label">Total Evaluations</div>
+          <div class="stat-num" id="stat-total">0</div>
+          <div class="stat-icon" style="color:var(--accent)">
+            <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+        </div>
+        <div class="stat-card pass">
+          <div class="stat-label">Passed</div>
+          <div class="stat-num" id="stat-pass">0</div>
+          <div class="stat-icon" style="color:var(--pass)">
+            <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+        </div>
+        <div class="stat-card warn">
+          <div class="stat-label">Warnings</div>
+          <div class="stat-num" id="stat-warn">0</div>
+          <div class="stat-icon" style="color:var(--warn)">
+            <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+        </div>
+        <div class="stat-card fail">
+          <div class="stat-label">Failed</div>
+          <div class="stat-num" id="stat-fail">0</div>
+          <div class="stat-icon" style="color:var(--fail)">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div>
+          <div class="section-title">Recent Evaluations</div>
+          <div class="section-sub text-muted text-sm mt-8">Latest agent assessments from the Council of Experts</div>
+        </div>
+        <button class="btn btn-primary" onclick="navigate('evaluate')">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          New Evaluation
+        </button>
+      </div>
+      <div class="table-wrap">
+        <div id="dashboard-table-body">
+          <div class="empty-state">
+            <div class="empty-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            <div class="empty-text">No evaluations yet</div>
+            <div class="empty-sub">Run your first evaluation to see results here</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ EVALUATE ═══ -->
+    <div class="page" id="page-evaluate">
+      <div id="eval-form-view">
+        <div id="conn-banner-wrap"></div>
+        <div class="form-card">
+          <div class="form-title">Deployment Context</div>
+          <div class="form-desc">Optionally describe the operational context for this evaluation.</div>
+          <div class="form-group">
+            <input type="text" id="f-context" placeholder="e.g. UN field operations" value="UN field operations" />
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="form-title">Agent Source *</div>
+          <div class="form-desc">Provide the agent's code via GitHub URL or by uploading a local folder.</div>
+
+          <!-- Tab switcher -->
+          <div style="display:flex;gap:0;margin-bottom:18px;border:1px solid var(--border2);border-radius:8px;overflow:hidden;width:fit-content;">
+            <button id="tab-github" onclick="switchSourceTab('github')"
+              style="padding:7px 18px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:var(--accent);color:#fff;font-family:var(--sans);transition:all 0.15s;">
+              GitHub URL
+            </button>
+            <button id="tab-folder" onclick="switchSourceTab('folder')"
+              style="padding:7px 18px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:var(--bg3);color:var(--text2);font-family:var(--sans);transition:all 0.15s;">
+              Local Folder
+            </button>
+          </div>
+
+          <!-- GitHub URL pane -->
+          <div id="pane-github">
+            <div class="form-group">
+              <label>GITHUB REPOSITORY URL</label>
+              <input type="url" id="f-github-url" placeholder="https://github.com/owner/repo" style="font-family:var(--mono);font-size:13px;" />
+            </div>
+          </div>
+
+          <!-- Local folder pane -->
+          <div id="pane-folder" style="display:none;">
+            <div class="form-group">
+              <label>SELECT FOLDER</label>
+              <!-- webkitdirectory lets user pick an entire folder -->
+              <input type="file" id="f-folder-input" webkitdirectory multiple
+                style="padding:8px;font-size:12px;cursor:pointer;" />
+            </div>
+            <div id="folder-file-list" style="margin-top:8px;font-size:11px;color:var(--text3);line-height:1.8;"></div>
+          </div>
+
+          <div id="github-fetch-status" style="margin-top:10px;font-size:11px;color:var(--text3)">Evaluation runs through Scoring, Governance, and Red Team modules in sequence.</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <button class="btn btn-ghost" onclick="fillDemo()">Load demo URL</button>
+          </div>
+          <button class="btn btn-primary" id="submit-btn" onclick="runEvaluation()">
+            <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Run Council Evaluation
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div id="eval-loading-view" style="display:none">
+        <div class="spinner-wrap">
+          <div class="spinner"></div>
+          <div class="spinner-text" id="loading-msg">Initializing Council of Experts...</div>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div id="eval-result-view" style="display:none"></div>
+    </div>
+
+    <!-- ═══ HISTORY ═══ -->
+    <div class="page" id="page-history">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Evaluation History</div>
+          <div class="section-sub text-muted text-sm mt-8">All past Council of Experts assessments</div>
+        </div>
+        <button class="btn btn-ghost" onclick="refreshHistory()">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+      </div>
+      <div class="table-wrap" id="history-table-wrap">
+        <div class="empty-state">
+          <div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><polyline points="12 7 12 12 15 15"/></svg></div>
+          <div class="empty-text">No history available</div>
+          <div class="empty-sub">Run an evaluation to populate history</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ RULES ═══ -->
+    <div class="page" id="page-rules">
+      <div class="section-header mb-16">
+        <div>
+          <div class="section-title">Governance Rules Database</div>
+          <div class="section-sub text-muted text-sm mt-8">38 rules across NIST AI 600-1, UN AI Principles, and EU AI Act frameworks</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <select id="rules-filter-fw" onchange="filterRules()" style="width:auto;padding:8px 12px;font-size:12px;">
+            <option value="">All frameworks</option>
+            <option value="NIST AI 600-1">NIST AI 600-1</option>
+            <option value="UN AI Principles">UN AI Principles</option>
+            <option value="EU AI Act">EU AI Act</option>
+          </select>
+          <select id="rules-filter-sev" onchange="filterRules()" style="width:auto;padding:8px 12px;font-size:12px;">
+            <option value="">All severities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+          </select>
+        </div>
+      </div>
+      <div id="rules-list">
+        <div class="spinner-wrap"><div class="spinner"></div><div class="spinner-text">Loading governance rules...</div></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- Rule Modal -->
+<div class="modal-overlay" id="rule-modal">
+  <div class="modal">
+    <div class="modal-close" onclick="closeModal()">✕</div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:5050';
+let allReports = [];
+let allRules = [];
+
+// ── Navigation ──
+const pageTitles = {
+  dashboard: ['Dashboard','UNICC AI Safety Evaluation System'],
+  evaluate: ['Run Evaluation','Submit agent transcript for Council assessment'],
+  history: ['Evaluation History','All past agent assessments'],
+  rules: ['Governance Rules','AI safety and compliance rule database'],
+};
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const navItems = document.querySelectorAll('.nav-item');
+  const order = ['dashboard','evaluate','history','rules'];
+  navItems[order.indexOf(page)].classList.add('active');
+  const [title, sub] = pageTitles[page];
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-sub').textContent = sub;
+  if (page === 'history') refreshHistory();
+  if (page === 'rules') loadRules();
+  if (page === 'dashboard') refreshDashboard();
+}
+
+// ── API Status ──
+async function checkHealth() {
+  try {
+    const r = await fetch(API+'/health', {signal: AbortSignal.timeout(4000)});
+    const d = await r.json();
+    if (d.success) {
+      document.getElementById('status-dot').className = 'status-dot online';
+      document.getElementById('status-text').textContent = d.data.mode+' · '+d.data.evaluations_run+' runs';
+      document.getElementById('api-mode-tag').textContent = d.data.mode === 'mock' ? 'MOCK MODE' : 'LIVE MODE';
+      return true;
+    }
+  } catch(e) {}
+  document.getElementById('status-dot').className = 'status-dot offline';
+  document.getElementById('status-text').textContent = 'API offline';
+  return false;
+}
+
+// ── Stats ──
+function updateStats(reports) {
+  const total = reports.length;
+  const pass = reports.filter(r=>r.final_verdict==='PASS').length;
+  const warn = reports.filter(r=>r.final_verdict==='WARN').length;
+  const fail = reports.filter(r=>r.final_verdict==='FAIL').length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-pass').textContent = pass;
+  document.getElementById('stat-warn').textContent = warn;
+  document.getElementById('stat-fail').textContent = fail;
+}
+
+// ── Verdict helpers ──
+function verdictClass(v) { return {PASS:'pass',WARN:'warn',FAIL:'fail'}[v]||''; }
+function recColor(r) { return {APPROVE:'pass',MONITOR:'info',ESCALATE:'warn',BLOCK:'fail'}[r]||''; }
+
+function verdictBadge(v) {
+  const cls = verdictClass(v);
+  return `<span class="badge ${cls}"><span class="badge-dot"></span>${v||'—'}</span>`;
+}
+
+// ── Table rendering ──
+function renderTable(reports, containerId) {
+  const el = document.getElementById(containerId);
+  if (!reports.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div class="empty-text">No evaluations yet</div>
+      <div class="empty-sub">Run your first evaluation to see results here</div>
+    </div>`;
+    return;
+  }
+  const rows = reports.slice(0,20).map(r => `
+    <tr onclick="showReportModal('${r.report_hash}')">
+      <td>${verdictBadge(r.final_verdict)}</td>
+      <td style="font-family:var(--mono)">${r.agent_id||'—'}</td>
+      <td><span class="badge ${recColor(r.recommendation)}">${r.recommendation||'—'}</span></td>
+      <td style="color:var(--text2)">${r.final_score!=null?Number(r.final_score).toFixed(2):'—'}<span style="color:var(--text3)">/5.0</span></td>
+      <td class="hash-cell">${(r.report_hash||'').slice(0,12)}...</td>
+      <td style="color:var(--text2);font-size:12px">${r.timestamp_utc ? new Date(r.timestamp_utc).toLocaleString() : '—'}</td>
+    </tr>`).join('');
+  el.innerHTML = `<table>
+    <thead><tr>
+      <th>Verdict</th><th>Agent ID</th><th>Recommendation</th><th>Score</th><th>Report Hash</th><th>Timestamp</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── Dashboard ──
+async function refreshDashboard() {
+  try {
+    const r = await fetch(API+'/reports');
+    const d = await r.json();
+    if (d.success) {
+      allReports = d.data.reports;
+      updateStats(allReports);
+      renderTable(allReports, 'dashboard-table-body');
+    }
+  } catch(e) { /* offline — show empty */ }
+}
+
+// ── History ──
+async function refreshHistory() {
+  const wrap = document.getElementById('history-table-wrap');
+  wrap.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-text">Loading history...</div></div>';
+  try {
+    const r = await fetch(API+'/reports');
+    const d = await r.json();
+    if (d.success) {
+      allReports = d.data.reports;
+      updateStats(allReports);
+      wrap.id = '';
+      wrap.innerHTML = '';
+      const div = document.createElement('div');
+      div.id = 'history-table-body';
+      wrap.appendChild(div);
+      renderTable(allReports, 'history-table-body');
+      wrap.id = 'history-table-wrap';
+    }
+  } catch(e) {
+    wrap.innerHTML = '<div class="empty-state"><div class="empty-text" style="color:var(--fail)">Could not connect to API</div><div class="empty-sub">Make sure python src/api.py is running on port 5050</div></div>';
+  }
+}
+
+// ── Load demo ──
+function fillDemo() {
+  document.getElementById('f-context').value = 'UN field operations';
+  document.getElementById('f-github-url').value = 'https://github.com/openai/openai-python';
+}
+
+// ── Source tab switcher ──
+let activeSourceTab = 'github';
+
+function switchSourceTab(tab) {
+  activeSourceTab = tab;
+  document.getElementById('pane-github').style.display = tab === 'github' ? 'block' : 'none';
+  document.getElementById('pane-folder').style.display = tab === 'folder' ? 'block' : 'none';
+  document.getElementById('tab-github').style.background = tab === 'github' ? 'var(--accent)' : 'var(--bg3)';
+  document.getElementById('tab-github').style.color     = tab === 'github' ? '#fff' : 'var(--text2)';
+  document.getElementById('tab-folder').style.background = tab === 'folder' ? 'var(--accent)' : 'var(--bg3)';
+  document.getElementById('tab-folder').style.color     = tab === 'folder' ? '#fff' : 'var(--text2)';
+  const statusEl = document.getElementById('github-fetch-status');
+  statusEl.style.color = 'var(--text3)';
+  statusEl.textContent = 'Evaluation runs through Scoring, Governance, and Red Team modules in sequence.';
+  document.getElementById('folder-file-list').textContent = '';
+}
+
+// Show file list preview when folder is selected
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('f-folder-input').addEventListener('change', function() {
+    const files = Array.from(this.files);
+    const listEl = document.getElementById('folder-file-list');
+    if (!files.length) { listEl.textContent = ''; return; }
+    const codeExts = ['.py','.js','.ts','.jsx','.tsx','.java','.go','.rb','.rs',
+                      '.cpp','.c','.h','.cs','.php','.sh','.md','.txt',
+                      '.yaml','.yml','.json','.toml'];
+    const readable = files.filter(f => codeExts.some(ext => f.name.endsWith(ext)));
+    listEl.innerHTML = `<span style="color:var(--text2)">📁 ${files.length} files selected &nbsp;·&nbsp; `
+      + `<span style="color:var(--accent)">${readable.length} readable code files</span></span><br>`
+      + readable.slice(0, 12).map(f => `&nbsp;&nbsp;${f.webkitRelativePath || f.name}`).join('<br>')
+      + (readable.length > 12 ? `<br>&nbsp;&nbsp;… and ${readable.length - 12} more` : '');
+  });
+});
+
+// ── Read local folder files into transcript string ──
+async function readFolderContent() {
+  const input = document.getElementById('f-folder-input');
+  const files = Array.from(input.files);
+  const statusEl = document.getElementById('github-fetch-status');
+
+  if (!files.length) throw new Error('Please select a folder first.');
+
+  const codeExts = ['.py','.js','.ts','.jsx','.tsx','.java','.go','.rb','.rs',
+                    '.cpp','.c','.h','.cs','.php','.sh','.md','.txt',
+                    '.yaml','.yml','.json','.toml'];
+  const readable = files
+    .filter(f => codeExts.some(ext => f.name.endsWith(ext)) && f.size < 50000)
+    .slice(0, 20);
+
+  if (!readable.length) throw new Error('No readable code files found in the selected folder.');
+
+  // Derive project name from the top-level folder
+  const topFolder = (readable[0].webkitRelativePath || readable[0].name).split('/')[0];
+
+  let transcript = `Repository: ${topFolder} (local upload)\n\n`;
+  let count = 0;
+  for (const file of readable) {
+    statusEl.style.color = 'var(--accent)';
+    statusEl.textContent = `Reading ${file.name}... (${++count}/${readable.length})`;
+    const text = await file.text();
+    const path = file.webkitRelativePath || file.name;
+    transcript += `\n--- FILE: ${path} ---\n${text.slice(0, 3000)}\n`;
+  }
+
+  statusEl.style.color = 'var(--pass)';
+  statusEl.textContent = `✓ Loaded ${count} files from ${topFolder}`;
+  return { transcript, agentName: topFolder };
+}
+
+
+async function fetchGitHubContent(repoUrl) {
+  const statusEl = document.getElementById('github-fetch-status');
+
+  // Parse owner/repo from URL
+  const match = repoUrl.match(/github\.com\/([^/]+)\/([^/\s?#]+)/);
+  if (!match) throw new Error('Invalid GitHub URL. Expected format: https://github.com/owner/repo');
+  const [, owner, repo] = match;
+
+  statusEl.style.color = 'var(--accent)';
+  statusEl.textContent = `Fetching repository ${owner}/${repo}...`;
+
+  // Get default branch via GitHub API
+  const metaRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+  if (!metaRes.ok) throw new Error(`Repository not found or is private (${metaRes.status})`);
+  const meta = await metaRes.json();
+  const branch = meta.default_branch || 'main';
+
+  // Get file tree
+  statusEl.textContent = `Reading file tree (${branch})...`;
+  const treeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`);
+  if (!treeRes.ok) throw new Error('Could not read repository tree');
+  const treeData = await treeRes.json();
+
+  // Filter to readable code/text files, max 20 files to avoid rate limits
+  const codeExts = ['.py','.js','.ts','.jsx','.tsx','.java','.go','.rb','.rs','.cpp','.c','.h','.cs','.php','.sh','.md','.txt','.yaml','.yml','.json','.toml','.env.example'];
+  const files = (treeData.tree || [])
+    .filter(f => f.type === 'blob' && codeExts.some(ext => f.path.endsWith(ext)) && f.size < 50000)
+    .slice(0, 20);
+
+  if (!files.length) throw new Error('No readable code files found in repository');
+
+  // Fetch file contents
+  let transcript = `Repository: ${owner}/${repo}\nBranch: ${branch}\nDescription: ${meta.description || 'N/A'}\nLanguage: ${meta.language || 'N/A'}\n\n`;
+  let fetched = 0;
+  for (const file of files) {
+    try {
+      statusEl.textContent = `Reading ${file.path}... (${++fetched}/${files.length})`;
+      const rawRes = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file.path}`);
+      if (rawRes.ok) {
+        const content = await rawRes.text();
+        transcript += `\n--- FILE: ${file.path} ---\n${content.slice(0, 3000)}\n`;
+      }
+    } catch(e) { /* skip unreadable file */ }
+  }
+
+  statusEl.style.color = 'var(--pass)';
+  statusEl.textContent = `✓ Fetched ${fetched} files from ${owner}/${repo}`;
+  return transcript;
+}
+
+// ── Run evaluation ──
+async function runEvaluation() {
+  const context = document.getElementById('f-context').value.trim();
+  document.getElementById('submit-btn').disabled = true;
+
+  let transcript, agentId;
+  try {
+    if (activeSourceTab === 'github') {
+      const githubUrl = document.getElementById('f-github-url').value.trim();
+      if (!githubUrl) { alert('Please enter a GitHub repository URL.'); document.getElementById('submit-btn').disabled = false; return; }
+      const urlMatch = githubUrl.match(/github\.com\/([^/]+)\/([^/\s?#]+)/);
+      agentId = urlMatch ? `${urlMatch[1]}/${urlMatch[2]}` : githubUrl;
+      transcript = await fetchGitHubContent(githubUrl);
+    } else {
+      const result = await readFolderContent();
+      transcript = result.transcript;
+      agentId = result.agentName;
+    }
+  } catch(e) {
+    document.getElementById('github-fetch-status').style.color = 'var(--fail)';
+    document.getElementById('github-fetch-status').textContent = '✗ ' + e.message;
+    document.getElementById('submit-btn').disabled = false;
+    return;
+  }
+
+  document.getElementById('eval-form-view').style.display = 'none';
+  document.getElementById('eval-loading-view').style.display = 'block';
+  document.getElementById('eval-result-view').style.display = 'none';
+
+  const msgs = [
+    'Initializing Council of Experts...',
+    'Running Scoring Module (A)...',
+    'Running Governance Module (B)...',
+    'Running Red Team Module (C)...',
+    'Synthesizing council verdict...',
+  ];
+  let mi = 0;
+  const msgEl = document.getElementById('loading-msg');
+  const interval = setInterval(() => {
+    if (mi < msgs.length-1) { mi++; msgEl.textContent = msgs[mi]; }
+  }, 1800);
+
+  try {
+    const r = await fetch(API+'/evaluate', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ agent_id:agentId, context, transcript })
+    });
+    const d = await r.json();
+    clearInterval(interval);
+    document.getElementById('submit-btn').disabled = false;
+    if (d.success) {
+      allReports.unshift(d.data);
+      updateStats(allReports);
+      showResult(d.data);
+    } else {
+      showError(d.error||'Evaluation failed');
+    }
+  } catch(e) {
+    clearInterval(interval);
+    document.getElementById('submit-btn').disabled = false;
+    showError('Cannot connect to API at '+API+'. Make sure python src/api.py is running.');
+  }
+}
+
+// ── Show result ──
+function showResult(data) {
+  document.getElementById('eval-loading-view').style.display = 'none';
+  document.getElementById('eval-result-view').style.display = 'block';
+
+  const vc = verdictClass(data.final_verdict);
+  const scorePercent = Math.min(100, (data.final_score/5)*100).toFixed(1);
+  const modNames = { module_a_scoring:'Scoring (A)', module_b_governance:'Governance (B)', module_c_redteam:'Red Team (C)' };
+  const modCards = Object.entries(data.module_verdicts||{}).map(([k,v]) => {
+    const mc = verdictClass(v);
+    const ms = data.module_scores ? Number(data.module_scores[k]).toFixed(2) : '—';
+    return `<div class="module-card ${mc}">
+      <div class="module-name">${modNames[k]||k}</div>
+      <div class="module-score ${mc}">${ms}<span>/5.0</span></div>
+      ${verdictBadge(v)}
+    </div>`;
+  }).join('');
+
+  const flags = (data.all_governance_flags||[]).map(f => {
+    const isCrit = (data.critical_flags||[]).includes(f);
+    return `<span class="flag-tag${isCrit?' critical':''}" onclick="loadRule('${f}')">${f}</span>`;
+  }).join('');
+
+  const disagreeHtml = (data.disagreements||[]).length
+    ? (data.disagreements.map(d=>`<div class="disagree-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--warn);flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${d}</div>`).join(''))
+    : '<div class="agree-item">✓ Council unanimous — no disagreements</div>';
+
+  const humanBanner = data.requires_human_review
+    ? `<div class="review-banner"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div><strong>Human Review Required</strong><span> — This evaluation requires escalation to a qualified human reviewer before deployment.</span></div></div>`
+    : '';
+
+  document.getElementById('eval-result-view').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:14px;font-weight:500;">Evaluation Result</div>
+      <div style="display:flex;gap:8px">
+        ${data.critique_triggered ? '<span class="badge info">Critique Round Triggered</span>' : ''}
+        <button class="btn btn-ghost" style="font-size:12px" onclick="resetEval()">← New Evaluation</button>
+      </div>
+    </div>
+    ${humanBanner}
+    <div class="result-header">
+      <div class="verdict-main">
+        <div class="verdict-circle ${vc}">${data.final_verdict}</div>
+        <div>
+          <div class="verdict-label ${vc}">${data.final_verdict === 'PASS' ? 'Agent Passed' : data.final_verdict === 'WARN' ? 'Warning Issued' : 'Agent Failed'}</div>
+          <div class="verdict-meta">${data.agent_id} · ${new Date(data.timestamp_utc).toLocaleString()}</div>
+          <div style="margin-top:8px">
+            <span class="badge ${recColor(data.recommendation)}">${data.recommendation}</span>
+            <span class="badge info" style="margin-left:6px">Disagreement: ${data.disagreement_level}</span>
+          </div>
+        </div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-label">
+          <span>Final Score</span>
+          <span>${Number(data.final_score).toFixed(3)} / 5.0</span>
+        </div>
+        <div class="score-bar"><div class="score-fill ${vc}" style="width:${scorePercent}%"></div></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text2)">Confidence: ${Math.round(data.final_confidence*100)}%</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text2)">Evaluated in ${data.processing_time_ms}ms</div>
+      </div>
+    </div>
+
+    <div class="module-grid">${modCards}</div>
+
+    <div class="form-card" style="margin-bottom:16px">
+      <div class="form-title" style="margin-bottom:12px">Council Disagreements</div>
+      ${disagreeHtml}
+    </div>
+
+    ${flags ? `<div class="form-card" style="margin-bottom:16px">
+      <div class="form-title" style="margin-bottom:8px">Governance Flags <span style="font-size:12px;color:var(--text2);font-weight:400">(click a flag to view rule details)</span></div>
+      <div class="flags-wrap">${flags}</div>
+    </div>` : ''}
+
+    <div class="rationale-block">
+      <div class="rationale-header" onclick="toggleRationale(this)">
+        <h3>Council Rationale</h3>
+        <span style="font-size:12px;color:var(--text2)">Click to expand ▾</span>
+      </div>
+      <div class="rationale-body">${data.synthesis_rationale||'No rationale provided.'}</div>
+    </div>
+
+    <div class="audit-row">
+      <div class="audit-item">Input hash: <b>${(data.input_hash||'').slice(0,20)}...</b></div>
+      <div class="audit-item">Report hash: <b>${(data.report_hash||'').slice(0,20)}...</b></div>
+      <div class="audit-item">UTC: <b>${data.timestamp_utc}</b></div>
+    </div>
+  `;
+}
+
+function toggleRationale(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+function resetEval() {
+  document.getElementById('eval-form-view').style.display = 'block';
+  document.getElementById('eval-result-view').style.display = 'none';
+  document.getElementById('eval-result-view').innerHTML = '';
+  const statusEl = document.getElementById('github-fetch-status');
+  statusEl.style.color = 'var(--text3)';
+  statusEl.textContent = 'Evaluation runs through Scoring, Governance, and Red Team modules in sequence.';
+}
+
+function showError(msg) {
+  document.getElementById('eval-loading-view').style.display = 'none';
+  document.getElementById('eval-result-view').style.display = 'block';
+  document.getElementById('eval-result-view').innerHTML = `
+    <div class="review-banner">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <div><strong>Evaluation Failed</strong><span> — ${msg}</span></div>
+    </div>
+    <button class="btn btn-ghost" onclick="resetEval()">← Try Again</button>`;
+}
+
+// ── Report modal (from history/dashboard row click) ──
+async function showReportModal(hash) {
+  const report = allReports.find(r => r.report_hash === hash);
+  if (report) {
+    // Navigate to evaluate page and show result
+    navigate('evaluate');
+    document.getElementById('eval-form-view').style.display = 'none';
+    showResult(report);
+  }
+}
+
+// ── Rules ──
+async function loadRules() {
+  try {
+    const r = await fetch(API+'/rules');
+    const d = await r.json();
+    if (d.success) {
+      allRules = d.data.rules;
+      renderRules(allRules);
+    }
+  } catch(e) {
+    document.getElementById('rules-list').innerHTML =
+      '<div class="empty-state"><div class="empty-text" style="color:var(--fail)">Could not load rules</div><div class="empty-sub">API must be running to load governance rules</div></div>';
+  }
+}
+
+function renderRules(rules) {
+  if (!rules.length) {
+    document.getElementById('rules-list').innerHTML = '<div class="empty-state"><div class="empty-text">No rules found</div></div>';
+    return;
+  }
+  const sevColor = {CRITICAL:'fail',HIGH:'warn',MEDIUM:'info'};
+  document.getElementById('rules-list').innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Rule ID</th><th>Framework</th><th>Category</th><th>Severity</th><th>Description</th></tr></thead>
+    <tbody>${rules.map(r=>`
+      <tr onclick="showRuleModal(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+        <td style="font-family:var(--mono);font-size:11px">${r.rule_id}</td>
+        <td><span class="badge info" style="font-size:10px">${r.framework}</span></td>
+        <td style="color:var(--text2);font-size:12px">${r.category||'—'}</td>
+        <td>${r.severity?`<span class="badge ${sevColor[r.severity]||''}">${r.severity}</span>`:'—'}</td>
+        <td style="font-size:12px;color:var(--text2);max-width:300px">${(r.description||'').slice(0,80)}${(r.description||'').length>80?'…':''}</td>
+      </tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+function filterRules() {
+  const fw  = document.getElementById('rules-filter-fw').value;
+  const sev = document.getElementById('rules-filter-sev').value;
+  let filtered = allRules;
+  if (fw)  filtered = filtered.filter(r => r.framework === fw);
+  if (sev) filtered = filtered.filter(r => r.severity === sev);
+  renderRules(filtered);
+}
+
+async function loadRule(ruleId) {
+  try {
+    const r = await fetch(API+'/rules/'+ruleId);
+    const d = await r.json();
+    if (d.success) showRuleModal(d.data);
+    else showRuleModal({rule_id: ruleId, description: 'Rule details unavailable.'});
+  } catch(e) {
+    showRuleModal({rule_id: ruleId, description: 'Could not load rule — API offline.'});
+  }
+}
+
+function showRuleModal(rule) {
+  if (typeof rule === 'string') { try { rule = JSON.parse(rule); } catch(e){return;} }
+  const sevColor = {CRITICAL:'fail',HIGH:'warn',MEDIUM:'info'};
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-id">${rule.rule_id||'Unknown'}</div>
+    <h2>${rule.category||rule.rule_id||'Governance Rule'}</h2>
+    <div class="rule-meta">
+      ${rule.framework ? `<span class="badge info">${rule.framework}</span>` : ''}
+      ${rule.severity ? `<span class="badge ${sevColor[rule.severity]||''}">${rule.severity}</span>` : ''}
+    </div>
+    <div class="modal-body">${rule.description||'No description available.'}</div>
+    ${rule.remediation ? `<div class="divider"></div><div style="font-size:12px;color:var(--text2)"><b style="color:var(--text)">Remediation:</b> ${rule.remediation}</div>` : ''}
+  `;
+  document.getElementById('rule-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('rule-modal').classList.remove('open');
+}
+
+document.getElementById('rule-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── Init ──
+(async () => {
+  await checkHealth();
+  await refreshDashboard();
+  setInterval(checkHealth, 15000);
+})();
+</script>
+</body>
+</html>
