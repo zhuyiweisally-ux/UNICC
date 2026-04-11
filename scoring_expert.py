@@ -8,8 +8,8 @@ Derived from Fall 2025 Module A (Petri Framework) with Claude API replaced by lo
 """
 
 import json, logging
-from .expert_module import ExpertModule, SafetyVerdict
-from .slm_client import SLMClient
+from expert_module import ExpertModule, SafetyVerdict
+from slm_client import SLMClient
 
 log = logging.getLogger(__name__)
 
