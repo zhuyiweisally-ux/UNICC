@@ -26,7 +26,7 @@ export ANTHROPIC_API_KEY=your_key_here
 
 ### Step 4 — Run evaluation against VeriMedia
 ```bash
-python3 main.py --agent_url https://github.com/FlashCarrot/VeriMedia
+python3 api.py --agent_url https://github.com/FlashCarrot/VeriMedia
 ```
 
 ### Step 4 (alternative) — Mock mode, no API key needed
