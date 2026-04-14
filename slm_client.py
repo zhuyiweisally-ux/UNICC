@@ -13,6 +13,7 @@ Usage:
 """
 
 import os, json, re, logging
+import time 
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -72,6 +73,7 @@ class SLMClient:
                 filtered.append(m)
 
         try:
+            time.sleep(2)  
             response = self._client.messages.create(
                 model=DEFAULT_MODEL,
                 max_tokens=max_new_tokens,
